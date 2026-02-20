@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SF Apartment Hunter — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0c0c0f;
+    --surface:   #16161a;
+    --surface2:  #1e1e24;
+    --border:    #2a2a32;
+    --text:      #e8e6e3;
+    --text2:     #9a9a9f;
+    --accent:    #ff6b35;
+    --accent2:   #ffa726;
+    --green:     #4caf50;
+    --blue:      #42a5f5;
+    --purple:    #ab47bc;
+    --red:       #ef5350;
+    --tag-new:   #1b5e20;
+    --tag-value: #0d47a1;
+    --tag-space: #4a148c;
+    --radius:    12px;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+
+  /* ── Header ─────────────────────────────── */
+  .header {
+    padding: 2.5rem 2rem 2rem;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #12121a 0%, var(--bg) 100%);
+  }
+  .header-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .header h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .header h1 span.icon { font-size: 1.5rem; }
+  .header .meta {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--text2);
+    text-align: right;
+  }
+
+  /* ── Controls ───────────────────────────── */
+  .controls {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1.25rem 2rem;
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .controls button {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.78rem;
+    padding: 0.45rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .controls button:hover { border-color: var(--accent); color: var(--text); }
+  .controls button.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .controls .search-box {
+    flex: 1;
+    min-width: 200px;
+    max-width: 320px;
+    margin-left: auto;
+  }
+  .controls input {
+    width: 100%;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .controls input:focus { border-color: var(--accent); }
+  .controls input::placeholder { color: var(--text2); }
+
+  /* ── Stats Bar ──────────────────────────── */
+  .stats {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 2rem 1rem;
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .stat {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text2);
+  }
+  .stat strong { color: var(--text); font-size: 1.1rem; display: block; }
+
+  /* ── Grid ────────────────────────────────── */
+  .grid {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 2rem 3rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 1rem;
+  }
+
+  /* ── Card ────────────────────────────────── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: transform 0.2s, border-color 0.25s;
+    display: flex;
+    flex-direction: column;
+  }
+  .card:hover {
+    transform: translateY(-3px);
+    border-color: var(--accent);
+  }
+
+  .card-img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    background: var(--surface2);
+  }
+  .card-img-placeholder {
+    width: 100%;
+    height: 180px;
+    background: var(--surface2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    color: var(--text2);
+    opacity: 0.3;
+  }
+
+  .card-body {
+    padding: 1.1rem 1.25rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .card-title {
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+  }
+  .card-score {
+    flex-shrink: 0;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 0.2rem 0.55rem;
+    border-radius: 8px;
+    background: var(--surface2);
+  }
+  .card-score.high { background: #1b5e20; color: #a5d6a7; }
+  .card-score.mid  { background: #e65100; color: #ffcc80; }
+  .card-score.low  { background: #b71c1c; color: #ef9a9a; }
+
+  .card-address {
+    font-size: 0.8rem;
+    color: var(--text2);
+    line-height: 1.3;
+  }
+
+  .card-details {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--text2);
+  }
+  .card-details .price {
+    color: var(--accent2);
+    font-weight: 700;
+    font-size: 1.1rem;
+  }
+
+  .card-tags {
+    display: flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+  }
+  .tag {
+    font-size: 0.68rem;
+    font-family: 'DM Mono', monospace;
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+    background: var(--surface2);
+    color: var(--text2);
+    white-space: nowrap;
+  }
+  .tag.new   { background: var(--tag-new);   color: #a5d6a7; }
+  .tag.value { background: var(--tag-value); color: #90caf9; }
+  .tag.space { background: var(--tag-space); color: #ce93d8; }
+
+  .card-source {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .card-source.rentcast { color: var(--green); }
+  .card-source.zillow   { color: var(--blue); }
+  .card-source.redfin   { color: var(--red); }
+
+  .card-link {
+    display: inline-block;
+    margin-top: auto;
+    padding-top: 0.5rem;
+  }
+  .card-link a {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s;
+  }
+  .card-link a:hover { border-bottom-color: var(--accent); }
+
+  .empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text2);
+  }
+  .empty-state h2 { font-size: 1.5rem; color: var(--text); margin-bottom: 0.5rem; }
+
+  @media (max-width: 768px) {
+    .header { padding: 1.5rem 1rem; }
+    .controls, .stats, .grid { padding-left: 1rem; padding-right: 1rem; }
+    .grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <h1><span class="icon">🏠</span> SF Apartment Hunter</h1>
+    <div class="meta">
+      <div>3BR · San Francisco · ≤$8000/mo</div>
+      <div>Updated February 20, 2026 at 06:06 PM</div>
+    </div>
+  </div>
+</div>
+
+<div class="controls" id="controls">
+  <button class="active" data-filter="all">All</button>
+  <button data-filter="new">🆕 New Listings</button>
+  <button data-filter="top">⭐ Top Rated</button>
+  <button data-filter="value">💰 Best Value</button>
+  <button data-filter="rentcast">RentCast</button>
+  <button data-filter="zillow">Zillow</button>
+  <button data-filter="redfin">Redfin</button>
+  <div class="search-box">
+    <input type="text" id="searchInput" placeholder="Search address or neighborhood...">
+  </div>
+</div>
+
+<div class="stats" id="stats"></div>
+<div class="grid" id="grid"></div>
+
+<script>
+const DATA = [{"id": "re_7_0", "source": "rentcast", "title": "3366 Hyde St", "address": "3366 Hyde St, San Francisco, CA 94102", "city": "San Francisco", "state": "CA", "zip": "94129", "price": 4852, "bedrooms": 3, "bathrooms": 1.5, "sqft": 1619, "url": "https://www.rentcast.io/apartments/san-francisco-ca/3366-hyde-st", "image": "", "lat": 37.7562189031081, "lng": -122.4405897222434, "listed_date": "2026-02-13T18:06:25.451328+00:00", "days_on_market": 7, "property_type": "condo", "pet_friendly": true, "parking": true, "laundry": "in-unit", "photos_count": 25, "score": 76.6, "tags": ["Spacious", "Parking", "In-Unit Laundry"], "amenities": ["Pool", "EV Charging", "Concierge", "Package Room", "Dog Run", "Bike Storage", "Central AC"]}, {"id": "re_7_1", "source": "rentcast", "title": "400 Hyde St", "address": "400 Hyde St, San Francisco, CA 94107", "city": "San Francisco", "state": "CA", "zip": "94106", "price": 3716, "bedrooms": 3, "bathrooms": 1.5, "sqft": 1119, "url": "https://www.rentcast.io/apartments/san-francisco-ca/400-hyde-st", "image": "", "lat": 37.760440612107665, "lng": -122.43814834094236, "listed_date": "2026-02-16T18:06:25.451341+00:00", "days_on_market": 4, "property_type": "condo", "pet_friendly": true, "parking": true, "laundry": "in-unit", "photos_count": 15, "score": 75.0, "tags": ["Great Value", "Parking", "In-Unit Laundry"], "amenities": ["Central AC", "Concierge", "Pool", "EV Charging", "Dishwasher", "Dog Run", "Bike Storage"]}, {"id": "zi_5_2", "source": "zillow", "title": "835 Hyde St", "address": "835 Hyde St, San Francisco, CA 94126", "city": "San Francisco", "state": "CA", "zip": "94119", "price": 3603, "bedrooms": 3, "bathrooms": 1, "sqft": 1602, "url": "https://www.zillow.com/homedetails/835-Hyde-St-San-Francisco-CA/123452_zpid/", "image": "", "lat": 37.76028368583087, "lng": -122.46569632890424, "listed_date": "2026-02-20T18:06:25.451287+00:00", "days_on_market": 0, "property_type": "townhouse", "pet_friendly": true, "parking": false, "laundry": "none", "photos_count": 15, "score": 72.4, "tags": ["Great Value", "Spacious", "\ud83c\udd95 New"], "amenities": ["Dishwasher", "Central AC", "Pool", "Dog Run", "Co-Working Space", "Rooftop Deck", "Package Room"]}, {"id": "zi_9_2", "source": "zillow", "title": "2083 Haight St", "address": "2083 Haight St, San Francisco, CA 94111", "city": "San Francisco", "state": "CA", "zip": "94119", "price": 3645, "bedrooms": 3, "bathrooms": 2.5, "sqft": 1593, "url": "https://www.zillow.com/homedetails/2083-Haight-St-San-Francisco-CA/123492_zpid/", "image": "", "lat": 37.78718454632156, "lng": -122.45677675676095, "listed_date": "2026-02-08T18:06:25.451436+00:00", "days_on_market": 12, "property_type": "apartment", "pet_friendly": true, "parking": true, "laundry": "in-unit", "photos_count": 13, "score": 71.9, "tags": ["Great Value", "Parking", "In-Unit Laundry"], "amenities": ["Concierge", "Gym", "EV Charging", "Co-Working Space", "Pool"]}, {"id": "re_13_1", "source": "rentcast", "title": "3861 Fillmore St", "address": "3861 Fillmore St, San Francisco, CA 94104", "city": "San Francisco", "state": "CA", "zip": "94104", "price": 4839, "bedrooms": 3, "bathrooms": 1, "sqft": 1492, "url": "https://www.rentcast.io/apartments/san-francisco-ca/3861-fillmore-st", "image": "", "lat": 37.79282162007429, "lng": -122.42070887825102, "listed_date": "2026-02-18T18:06:25.451576+00:00", "days_on_market": 2, "property_type": "apartment", "pet_friendly": true, "parking": true, "laundry": "in-unit", "photos_count": 21, "score": 70.3, "tags": ["\ud83c\udd95 New", "Parking", "In-Unit Laundry"], "amenities": ["Pool", "EV Charging", "Gym", "Hardwood Floors"]}, {"id": "zi_10_1", "source": "zillow", "title": "127 Divisadero St", "address": "127 Divisadero St, San Francisco, CA 94133", "city": "San Francisco", "state": "CA", "zip": "94125", "price": 3939, "bedrooms": 3, "bathrooms": 2.5, "sqft": 1682, "url": "https://www.zillow.com/homedetails/127-Divisadero-St-San-Francisco-CA/1234101_zpid/", "image": "", "lat": 37.75979728437115, "lng": -122.39517287172613, "listed_date": "2026-01-30T18:06:25.451462+00:00", "days_on_market": 21, "property_type": "condo", "pet_friendly": true, "parking": true, "laundry": "on-site", "photos_count": 22, "score": 68.4, "tags": ["Great Value", "Spacious", "Parking"], "amenities": ["Rooftop Deck", "Concierge", "Gym", "Dog Run", "Co-Working Space"]}, {"id": "zi_7_2", "source": "zillow", "title": "181 Valencia St", "address": "181 Valencia St, San Francisco, CA 94102", "city": "San Francisco", "state": "CA", "zip": "94103", "price": 4084, "bedrooms": 3, "bathrooms": 1.5, "sqft": 1351, "url": "https://www.zillow.com/homedetails/181-Valencia-St-San-Francisco-CA/123472_zpid/", "image": "", "lat": 37.76369697627198, "lng": -122.44048452493033, "listed_date": "2026-01-11T18:06:25.451354+00:00", "days_on_market": 40, "property_type": "apartment", "pet_friendly": false, "parking": true, "laundry": "in-unit", "photos_count": 20, "score": 64.8, "tags": ["Great Value", "Loaded with Amenities", "Parking", "In-Unit Laundry"], "amenities": ["Central AC", "Concierge", "Gym", "Rooftop Deck", "Package Room", "Hardwood Floors", "EV Charging", "Dog Run"]}, {"id": "re_1_0", "source": "rentcast", "title": "716 Church St", "address": "716 Church St, San Francisco, CA 94124", "city": "San Francisco", "state": "CA", "zip": "94101", "price": 5341, "bedrooms": 3, "bathrooms": 1.5, "sqft": 1454, "url": "https://www.rentcast.io/apartments/san-francisco-ca/716-church-st", "image": "", "lat": 37.76761731900944, "lng": -122.42193546536832, "listed_date": "2026-02-01T18:06:25.451073+00:00", "days_on_market": 19, "property_type": "condo", "pet_friendly": true, "parking": true, "laundry": "on-site", "photos_count": 22, "score": 64.7, "tags": ["Parking"], "amenities": ["Pool", "Concierge", "Co-Working Space", "EV Charging", "Dishwasher", "Hardwood Floors", "Central AC"]}, {"id": "zi_1_1", "source": "zillow", "title": "3462 Hyde St", "address": "3462 Hyde St, San Francisco, CA 94107", "city": "San Francisco", "state": "CA", "zip": "94134", "price": 4123, "bedrooms": 3, "bathrooms": 1, "sqft": 1128, "url": "https://www.zillow.com/homedetails/3462-Hyde-St-San-Francisco-CA/123411_zpid/", "image": "", "lat": 37.75887287686235, "lng": -122.41876624573823, "listed_date": "2026-01-29T18:06:25.451089+00:00", "days_on_market": 22, "property_type": "townhouse", "pet_friendly": false, "parking": true, "laundry": "on-site", "photos_count": 19, "score": 63.8, "tags": ["Loaded with Amenities", "Parking"], "amenities": ["Pool", "Package Room", "Gym", "Central AC", "EV Charging", "Dishwasher", "Bike Storage", "Dog Run"]}, {"id": "re_7_3", "source": "redfin", "title": "3812 Irving St", "address": "3812 Irving St, San Francisco, CA 94110", "city": "San Francisco", "state": "CA", "zip": "94125", "price": 3715, "bedrooms": 3, "bathrooms": 2, "sqft": 1179, "url": "https://www.redfin.com/CA/San-Francisco/3812-Irving-St-94121/home/123473", "image": "", "lat": 37.75826832578067, "lng": -122.43077936043524, "listed_date": "2026-01-08T18:06:25.451367+00:00", "days_on_market": 43, "property_type": "townhouse", "pet_friendly": true, "parking": true, "laundry": "none", "photos_count": 25, "score": 62.3, "tags": ["Great Value", "Parking"], "amenities": ["Central AC", "Gym", "Rooftop Deck", "Co-Working Space", "Package Room"]}, {"id": "zi_2_3", "source": "zillow", "title": "3971 Church St", "address": "3971 Church St, San Francisco, CA 94122", "city": "San Francisco", "state": "CA", "zip": "94110", "price": 5022, "bedrooms": 3, "bathrooms": 1.5, "sqft": 1384, "url": "https://www.zillow.com/homedetails/3971-Church-St-San-Francisco-CA/123423_zpid/", "image": "", "lat": 37.797785155001186, "lng": -122.41539193327894, "listed_date": "2026-02-06T18:06:25.451146+00:00", "days_on_market": 14, "property_type": "townhouse", "pet_friendly": true, "parking": true, "laundry": "on-site", "photos_count": 7, "score": 61.6, "tags": ["Parking"], "amenities": ["Bike Storage", "Central AC", "Concierge", "Dishwasher", "Pool", "Dog Run", "EV Charging"]}, {"id": "zi_4_1", "source": "zillow", "title": "754 Folsom St", "address": "754 Folsom St, San Francisco, CA 94109", "city": "San Francisco", "state": "CA", "zip": "94117", "price": 4732, "bedrooms": 3, "bathrooms": 2, "sqft": 1721, "url": "https://www.zillow.com/homedetails/754-Folsom-St-San-Francisco-CA/123441_zpid/", "image": "", "lat": 37.78198688117995, "lng": -122.39651615945562, "listed_date": "2026-01-31T18:06:25.451209+00:00", "days_on_market": 20, "property_type": "townhouse", "pet_friendly": false, "parking": true, "laundry": "in-unit", "photos_count": 19, "score": 58.2, "tags": ["Spacious", "Parking", "In-Unit Laundry"], "amenities": ["Central AC", "Concierge"]}, {"id": "re_3_2", "source": "rentcast", "title": "3999 Divisadero St", "address": "3999 Divisadero St, San Francisco, CA 94114", "city": "San Francisco", "state": "CA", "zip": "94116", "price": 6658, "bedrooms": 3, "bathrooms": 2, "sqft": 1758, "url": "https://www.rentcast.io/apartments/san-francisco-ca/3999-divisadero-st", "image": "", "lat": 37.78945966859927, "lng": -122.43156639755765, "listed_date": "2026-02-10T18:06:25.451185+00:00", "days_on_market": 10, "property_type": "apartment", "pet_friendly": true, "parking": true, "laundry": "none", "photos_count": 24, "score": 58.0, "tags": ["Spacious", "Parking"], "amenities": ["EV Charging", "Pool", "Hardwood Floors", "Central AC"]}, {"id": "re_4_2", "source": "redfin", "title": "3607 Haight St", "address": "3607 Haight St, San Francisco, CA 94103", "city": "San Francisco", "state": "CA", "zip": "94125", "price": 4313, "bedrooms": 3, "bathrooms": 2.5, "sqft": 1354, "url": "https://www.redfin.com/CA/San-Francisco/3607-Haight-St-94118/home/123442", "image": "", "lat": 37.78428361631903, "lng": -122.39334266426417, "listed_date": "2026-01-20T18:06:25.451221+00:00", "days_on_market": 31, "property_type": "apartment", "pet_friendly": true, "parking": true, "laundry": "in-unit", "photos_count": 22, "score": 57.8, "tags": ["Parking", "In-Unit Laundry"], "amenities": ["Dishwasher", "Bike Storage", "Rooftop Deck"]}, {"id": "re_2_0", "source": "rentcast", "title": "2020 Divisadero St", "address": "2020 Divisadero St, San Francisco, CA 94122", "city": "San Francisco", "state": "CA", "zip": "94122", "price": 5479, "bedrooms": 3, "bathrooms": 1, "sqft": 1632, "url": "https://www.rentcast.io/apartments/san-francisco-ca/2020-divisadero-st", "image": "", "lat": 37.787340025050696, "lng": -122.41293038329337, "listed_date": "2026-01-24T18:06:25.451104+00:00", "days_on_market": 27, "property_type": "condo", "pet_friendly": true, "parking": false, "laundry": "", "photos_count": 7, "score": 56.9, "tags": ["Spacious"], "amenities": ["Pool", "Dishwasher", "Central AC", "Bike Storage", "Concierge", "EV Charging"]}, {"id": "zi_9_0", "source": "zillow", "title": "954 Divisadero St", "address": "954 Divisadero St, San Francisco, CA 94110", "city": "San Francisco", "state": "CA", "zip": "94120", "price": 3909, "bedrooms": 3, "bathrooms": 2.5, "sqft": 1591, "url": "https://www.zillow.com/homedetails/954-Divisadero-St-San-Francisco-CA/123490_zpid/", "image": "", "lat": 37.77275979829544, "lng": -122.46242583614314, "listed_date": "2026-01-29T18:06:25.451412+00:00", "days_on_market": 22, "property_type": "townhouse", "pet_friendly": true, "parking": false, "laundry": "on-site", "photos_count": 11, "score": 56.3, "tags": ["Great Value"], "amenities": ["Gym", "Package Room", "Dog Run"]}, {"id": "re_6_1", "source": "redfin", "title": "1819 Haight St", "address": "1819 Haight St, San Francisco, CA 94122", "city": "San Francisco", "state": "CA", "zip": "94104", "price": 5656, "bedrooms": 3, "bathrooms": 1.5, "sqft": 1602, "url": "https://www.redfin.com/CA/San-Francisco/1819-Haight-St-94131/home/123461", "image": "", "lat": 37.75660270216206, "lng": -122.43935616498868, "listed_date": "2026-01-27T18:06:25.451314+00:00", "days_on_market": 24, "property_type": "townhouse", "pet_friendly": false, "parking": true, "laundry": "in-unit", "photos_count": 15, "score": 56.2, "tags": ["Spacious", "Parking", "In-Unit Laundry"], "amenities": ["Rooftop Deck", "Central AC", "Co-Working Space", "Gym"]}, {"id": "re_2_2", "source": "rentcast", "title": "1829 24th St", "address": "1829 24th St, San Francisco, CA 94110", "city": "San Francisco", "state": "CA", "zip": "94117", "price": 5274, "bedrooms": 3, "bathrooms": 1.5, "sqft": 1305, "url": "https://www.rentcast.io/apartments/san-francisco-ca/1829-24th-st", "image": "", "lat": 37.7989721005731, "lng": -122.41477842258921, "listed_date": "2026-02-10T18:06:25.451133+00:00", "days_on_market": 10, "property_type": "apartment", "pet_friendly": false, "parking": false, "laundry": "none", "photos_count": 24, "score": 55.5, "tags": ["Loaded with Amenities"], "amenities": ["Pool", "Central AC", "Dog Run", "Concierge", "EV Charging", "Hardwood Floors", "Co-Working Space", "Rooftop Deck"]}, {"id": "zi_5_1", "source": "zillow", "title": "135 Guerrero St", "address": "135 Guerrero St, San Francisco, CA 94134", "city": "San Francisco", "state": "CA", "zip": "94133", "price": 4826, "bedrooms": 3, "bathrooms": 1.5, "sqft": 1615, "url": "https://www.zillow.com/homedetails/135-Guerrero-St-San-Francisco-CA/123451_zpid/", "image": "", "lat": 37.76789528760342, "lng": -122.46734533617874, "listed_date": "2026-01-06T18:06:25.451247+00:00", "days_on_market": 45, "property_type": "condo", "pet_friendly": true, "parking": true, "laundry": "on-site", "photos_count": 7, "score": 55.4, "tags": ["Spacious", "Parking"], "amenities": ["Co-Working Space", "Bike Storage", "Dishwasher", "Concierge"]}, {"id": "zi_3_0", "source": "zillow", "title": "1752 Market St", "address": "1752 Market St, San Francisco, CA 94125", "city": "San Francisco", "state": "CA", "zip": "94106", "price": 5720, "bedrooms": 3, "bathrooms": 2.5, "sqft": 1431, "url": "https://www.zillow.com/homedetails/1752-Market-St-San-Francisco-CA/123430_zpid/", "image": "", "lat": 37.797639048363855, "lng": -122.44052166898824, "listed_date": "2026-02-07T18:06:25.451160+00:00", "days_on_market": 13, "property_type": "apartment", "pet_friendly": false, "parking": true, "laundry": "on-site", "photos_count": 15, "score": 55.2, "tags": ["Parking"], "amenities": ["Concierge", "EV Charging", "Hardwood Floors", "Package Room", "Dishwasher", "Rooftop Deck"]}, {"id": "zi_0_3", "source": "zillow", "title": "1113 Fillmore St", "address": "1113 Fillmore St, San Francisco, CA 94128", "city": "San Francisco", "state": "CA", "zip": "94102", "price": 5073, "bedrooms": 3, "bathrooms": 1, "sqft": 1499, "url": "https://www.zillow.com/homedetails/1113-Fillmore-St-San-Francisco-CA/123403_zpid/", "image": "", "lat": 37.77595298648049, "lng": -122.4437909697323, "listed_date": "2026-01-20T18:06:25.451055+00:00", "days_on_market": 31, "property_type": "condo", "pet_friendly": true, "parking": true, "laundry": "", "photos_count": 9, "score": 55.1, "tags": ["Parking"], "amenities": ["Dog Run", "Pool", "Central AC", "Hardwood Floors", "Concierge"]}, {"id": "re_5_0", "source": "rentcast", "title": "3806 Valencia St", "address": "3806 Valencia St, San Francisco, CA 94122", "city": "San Francisco", "state": "CA", "zip": "94122", "price": 4912, "bedrooms": 3, "bathrooms": 2.5, "sqft": 1201, "url": "https://www.rentcast.io/apartments/san-francisco-ca/3806-valencia-st", "image": "", "lat": 37.77151619939568, "lng": -122.47091934034019, "listed_date": "2026-02-14T18:06:25.451234+00:00", "days_on_market": 6, "property_type": "townhouse", "pet_friendly": true, "parking": false, "laundry": "on-site", "photos_count": 16, "score": 54.9, "tags": [], "amenities": ["Dishwasher", "Package Room", "Dog Run"]}, {"id": "re_14_1", "source": "redfin", "title": "1768 Hyde St", "address": "1768 Hyde St, San Francisco, CA 94123", "city": "San Francisco", "state": "CA", "zip": "94107", "price": 4566, "bedrooms": 3, "bathrooms": 2.5, "sqft": 1019, "url": "https://www.redfin.com/CA/San-Francisco/1768-Hyde-St-94119/home/1234141", "image": "", "lat": 37.729903747630836, "lng": -122.43445632095737, "listed_date": "2026-01-29T18:06:25.451602+00:00", "days_on_market": 22, "property_type": "apartment", "pet_friendly": true, "parking": false, "laundry": "on-site", "photos_count": 24, "score": 54.9, "tags": ["Loaded with Amenities"], "amenities": ["Co-Working Space", "Dog Run", "Package Room", "Gym", "Hardwood Floors", "Pool", "Dishwasher", "Bike Storage"]}, {"id": "re_12_2", "source": "redfin", "title": "3544 Guerrero St", "address": "3544 Guerrero St, San Francisco, CA 94125", "city": "San Francisco", "state": "CA", "zip": "94102", "price": 5071, "bedrooms": 3, "bathrooms": 2, "sqft": 1098, "url": "https://www.redfin.com/CA/San-Francisco/3544-Guerrero-St-94106/home/1234122", "image": "", "lat": 37.81024693246973, "lng": -122.40447795880532, "listed_date": "2026-02-08T18:06:25.451548+00:00", "days_on_market": 12, "property_type": "townhouse", "pet_friendly": true, "parking": true, "laundry": "", "photos_count": 6, "score": 54.8, "tags": ["Loaded with Amenities", "Parking"], "amenities": ["Pool", "Hardwood Floors", "Dog Run", "EV Charging", "Central AC", "Package Room", "Rooftop Deck", "Bike Storage"]}, {"id": "zi_3_1", "source": "zillow", "title": "313 Valencia St", "address": "313 Valencia St, San Francisco, CA 94109", "city": "San Francisco", "state": "CA", "zip": "94106", "price": 5287, "bedrooms": 3, "bathrooms": 1, "sqft": 1311, "url": "https://www.zillow.com/homedetails/313-Valencia-St-San-Francisco-CA/123431_zpid/", "image": "", "lat": 37.789104754211266, "lng": -122.43225029953098, "listed_date": "2026-01-31T18:06:25.451172+00:00", "days_on_market": 20, "property_type": "apartment", "pet_friendly": true, "parking": true, "laundry": "none", "photos_count": 16, "score": 54.2, "tags": ["Parking"], "amenities": ["Concierge", "Pool", "Rooftop Deck", "Dog Run"]}, {"id": "re_9_1", "source": "rentcast", "title": "2372 Hyde St", "address": "2372 Hyde St, San Francisco, CA 94109", "city": "San Francisco", "state": "CA", "zip": "94131", "price": 3775, "bedrooms": 3, "bathrooms": 1.5, "sqft": 1605, "url": "https://www.rentcast.io/apartments/san-francisco-ca/2372-hyde-st", "image": "", "lat": 37.774321803605744, "lng": -122.46466832525097, "listed_date": "2026-01-14T18:06:25.451424+00:00", "days_on_market": 37, "property_type": "condo", "pet_friendly": false, "parking": true, "laundry": "none", "photos_count": 25, "score": 54.0, "tags": ["Great Value", "Spacious", "Parking"], "amenities": ["EV Charging", "Pool"]}, {"id": "zi_12_0", "source": "zillow", "title": "1703 Irving St", "address": "1703 Irving St, San Francisco, CA 94125", "city": "San Francisco", "state": "CA", "zip": "94100", "price": 5298, "bedrooms": 3, "bathrooms": 2.5, "sqft": 1244, "url": "https://www.zillow.com/homedetails/1703-Irving-St-San-Francisco-CA/1234120_zpid/", "image": "", "lat": 37.79829679786527, "lng": -122.40905847855127, "listed_date": "2026-01-06T18:06:25.451521+00:00", "days_on_market": 45, "property_type": "apartment", "pet_friendly": false, "parking": true, "laundry": "in-unit", "photos_count": 20, "score": 53.3, "tags": ["Parking", "In-Unit Laundry"], "amenities": ["Bike Storage", "Dog Run", "EV Charging", "Pool", "Hardwood Floors", "Central AC", "Concierge"]}, {"id": "re_11_0", "source": "redfin", "title": "2875 Guerrero St", "address": "2875 Guerrero St, San Francisco, CA 94131", "city": "San Francisco", "state": "CA", "zip": "94109", "price": 4982, "bedrooms": 3, "bathrooms": 2, "sqft": 1554, "url": "https://www.redfin.com/CA/San-Francisco/2875-Guerrero-St-94132/home/1234110", "image": "", "lat": 37.758858554432514, "lng": -122.38237324556576, "listed_date": "2026-01-24T18:06:25.451487+00:00", "days_on_market": 27, "property_type": "apartment", "pet_friendly": false, "parking": false, "laundry": "in-unit", "photos_count": 19, "score": 51.8, "tags": ["In-Unit Laundry"], "amenities": ["Gym", "Co-Working Space", "Rooftop Deck", "Package Room"]}, {"id": "re_12_1", "source": "rentcast", "title": "3171 Irving St", "address": "3171 Irving St, San Francisco, CA 94111", "city": "San Francisco", "state": "CA", "zip": "94115", "price": 5081, "bedrooms": 3, "bathrooms": 1, "sqft": 1445, "url": "https://www.rentcast.io/apartments/san-francisco-ca/3171-irving-st", "image": "", "lat": 37.809085659476274, "lng": -122.40704360802889, "listed_date": "2026-01-08T18:06:25.451535+00:00", "days_on_market": 43, "property_type": "townhouse", "pet_friendly": true, "parking": false, "laundry": "none", "photos_count": 13, "score": 51.6, "tags": ["Loaded with Amenities"], "amenities": ["Gym", "Central AC", "Bike Storage", "Dishwasher", "Pool", "Co-Working Space", "Hardwood Floors", "EV Charging"]}, {"id": "re_0_2", "source": "redfin", "title": "2193 24th St", "address": "2193 24th St, San Francisco, CA 94127", "city": "San Francisco", "state": "CA", "zip": "94103", "price": 4679, "bedrooms": 3, "bathrooms": 1, "sqft": 1152, "url": "https://www.redfin.com/CA/San-Francisco/2193-24th-St-94133/home/123402", "image": "", "lat": 37.768566669411946, "lng": -122.44438033045454, "listed_date": "2026-01-26T18:06:25.451037+00:00", "days_on_market": 25, "property_type": "condo", "pet_friendly": true, "parking": true, "laundry": "none", "photos_count": 13, "score": 51.5, "tags": ["Parking"], "amenities": ["Dog Run", "Gym"]}, {"id": "re_0_0", "source": "redfin", "title": "2529 Fillmore St", "address": "2529 Fillmore St, San Francisco, CA 94103", "city": "San Francisco", "state": "CA", "zip": "94113", "price": 5115, "bedrooms": 3, "bathrooms": 2, "sqft": 961, "url": "https://www.redfin.com/CA/San-Francisco/2529-Fillmore-St-94125/home/123400", "image": "", "lat": 37.77587133139054, "lng": -122.42994309106415, "listed_date": "2026-01-12T18:06:25.450959+00:00", "days_on_market": 39, "property_type": "townhouse", "pet_friendly": false, "parking": true, "laundry": "on-site", "photos_count": 13, "score": 50.6, "tags": ["Loaded with Amenities", "Parking"], "amenities": ["Co-Working Space", "Concierge", "Rooftop Deck", "EV Charging", "Dishwasher", "Central AC", "Gym", "Bike Storage"]}, {"id": "re_11_1", "source": "rentcast", "title": "1359 Guerrero St", "address": "1359 Guerrero St, San Francisco, CA 94131", "city": "San Francisco", "state": "CA", "zip": "94126", "price": 4133, "bedrooms": 3, "bathrooms": 1.5, "sqft": 1267, "url": "https://www.rentcast.io/apartments/san-francisco-ca/1359-guerrero-st", "image": "", "lat": 37.75402321774844, "lng": -122.38209478760585, "listed_date": "2026-01-09T18:06:25.451500+00:00", "days_on_market": 42, "property_type": "condo", "pet_friendly": false, "parking": true, "laundry": "none", "photos_count": 25, "score": 50.4, "tags": ["Parking"], "amenities": ["Bike Storage", "Concierge", "Hardwood Floors", "Gym"]}, {"id": "zi_14_0", "source": "zillow", "title": "1165 Polk St", "address": "1165 Polk St, San Francisco, CA 94119", "city": "San Francisco", "state": "CA", "zip": "94131", "price": 4837, "bedrooms": 3, "bathrooms": 2, "sqft": 955, "url": "https://www.zillow.com/homedetails/1165-Polk-St-San-Francisco-CA/1234140_zpid/", "image": "", "lat": 37.72614162559393, "lng": -122.42713745788673, "listed_date": "2026-02-15T18:06:25.451589+00:00", "days_on_market": 5, "property_type": "townhouse", "pet_friendly": false, "parking": false, "laundry": "on-site", "photos_count": 13, "score": 49.9, "tags": [], "amenities": ["EV Charging", "Central AC", "Dishwasher", "Package Room", "Bike Storage", "Co-Working Space"]}, {"id": "re_14_2", "source": "rentcast", "title": "1167 Fillmore St", "address": "1167 Fillmore St, San Francisco, CA 94134", "city": "San Francisco", "state": "CA", "zip": "94102", "price": 3775, "bedrooms": 3, "bathrooms": 1, "sqft": 1436, "url": "https://www.rentcast.io/apartments/san-francisco-ca/1167-fillmore-st", "image": "", "lat": 37.73035474177138, "lng": -122.44089097960403, "listed_date": "2026-01-07T18:06:25.451615+00:00", "days_on_market": 44, "property_type": "apartment", "pet_friendly": false, "parking": false, "laundry": "on-site", "photos_count": 4, "score": 49.9, "tags": ["Great Value"], "amenities": ["Package Room", "Rooftop Deck", "Pool", "Central AC", "Hardwood Floors"]}, {"id": "re_0_1", "source": "rentcast", "title": "3305 Market St", "address": "3305 Market St, San Francisco, CA 94116", "city": "San Francisco", "state": "CA", "zip": "94134", "price": 4999, "bedrooms": 3, "bathrooms": 1, "sqft": 969, "url": "https://www.rentcast.io/apartments/san-francisco-ca/3305-market-st", "image": "", "lat": 37.775915163299466, "lng": -122.43845244853125, "listed_date": "2026-01-24T18:06:25.451013+00:00", "days_on_market": 27, "property_type": "townhouse", "pet_friendly": false, "parking": false, "laundry": "on-site", "photos_count": 8, "score": 49.8, "tags": [], "amenities": ["Package Room", "Concierge", "Co-Working Space", "Central AC", "Hardwood Floors", "EV Charging", "Dishwasher"]}, {"id": "re_10_2", "source": "rentcast", "title": "3999 Valencia St", "address": "3999 Valencia St, San Francisco, CA 94102", "city": "San Francisco", "state": "CA", "zip": "94121", "price": 4804, "bedrooms": 3, "bathrooms": 2.5, "sqft": 1565, "url": "https://www.rentcast.io/apartments/san-francisco-ca/3999-valencia-st", "image": "", "lat": 37.75456850323363, "lng": -122.39572223106154, "listed_date": "2026-01-07T18:06:25.451474+00:00", "days_on_market": 44, "property_type": "townhouse", "pet_friendly": false, "parking": false, "laundry": "", "photos_count": 24, "score": 49.7, "tags": [], "amenities": ["Concierge", "Pool", "Bike Storage", "Dog Run"]}, {"id": "re_6_0", "source": "rentcast", "title": "1159 Divisadero St", "address": "1159 Divisadero St, San Francisco, CA 94121", "city": "San Francisco", "state": "CA", "zip": "94117", "price": 5650, "bedrooms": 3, "bathrooms": 2, "sqft": 1196, "url": "https://www.rentcast.io/apartments/san-francisco-ca/1159-divisadero-st", "image": "", "lat": 37.75742720096568, "lng": -122.43466037761821, "listed_date": "2026-01-10T18:06:25.451302+00:00", "days_on_market": 41, "property_type": "condo", "pet_friendly": false, "parking": true, "laundry": "none", "photos_count": 9, "score": 48.8, "tags": ["Parking"], "amenities": ["Central AC", "Co-Working Space", "Gym", "Package Room", "Concierge", "Rooftop Deck", "Dog Run"]}, {"id": "re_4_0", "source": "rentcast", "title": "2450 Fillmore St", "address": "2450 Fillmore St, San Francisco, CA 94107", "city": "San Francisco", "state": "CA", "zip": "94128", "price": 4244, "bedrooms": 3, "bathrooms": 2.5, "sqft": 1157, "url": "https://www.rentcast.io/apartments/san-francisco-ca/2450-fillmore-st", "image": "", "lat": 37.777066624373774, "lng": -122.40136013278901, "listed_date": "2026-01-30T18:06:25.451198+00:00", "days_on_market": 21, "property_type": "condo", "pet_friendly": false, "parking": false, "laundry": "none", "photos_count": 24, "score": 48.3, "tags": [], "amenities": ["Dishwasher", "Pool", "Dog Run"]}, {"id": "re_14_3", "source": "rentcast", "title": "2408 Irving St", "address": "2408 Irving St, San Francisco, CA 94127", "city": "San Francisco", "state": "CA", "zip": "94130", "price": 4023, "bedrooms": 3, "bathrooms": 1, "sqft": 1083, "url": "https://www.rentcast.io/apartments/san-francisco-ca/2408-irving-st", "image": "", "lat": 37.73447257807205, "lng": -122.43835061943403, "listed_date": "2026-01-26T18:06:25.451628+00:00", "days_on_market": 25, "property_type": "condo", "pet_friendly": false, "parking": true, "laundry": "on-site", "photos_count": 9, "score": 48.2, "tags": ["Great Value", "Parking"], "amenities": ["Co-Working Space", "Rooftop Deck", "Dishwasher"]}, {"id": "zi_10_0", "source": "zillow", "title": "296 Hyde St", "address": "296 Hyde St, San Francisco, CA 94134", "city": "San Francisco", "state": "CA", "zip": "94101", "price": 4519, "bedrooms": 3, "bathrooms": 1, "sqft": 902, "url": "https://www.zillow.com/homedetails/296-Hyde-St-San-Francisco-CA/1234100_zpid/", "image": "", "lat": 37.762618318181175, "lng": -122.40370716262998, "listed_date": "2026-01-27T18:06:25.451449+00:00", "days_on_market": 24, "property_type": "townhouse", "pet_friendly": false, "parking": false, "laundry": "none", "photos_count": 23, "score": 46.1, "tags": [], "amenities": ["Gym", "Central AC", "Package Room", "Pool", "Dishwasher"]}, {"id": "re_2_1", "source": "redfin", "title": "1745 Guerrero St", "address": "1745 Guerrero St, San Francisco, CA 94130", "city": "San Francisco", "state": "CA", "zip": "94110", "price": 6315, "bedrooms": 3, "bathrooms": 1.5, "sqft": 1051, "url": "https://www.redfin.com/CA/San-Francisco/1745-Guerrero-St-94125/home/123421", "image": "", "lat": 37.796050690060476, "lng": -122.41521206346223, "listed_date": "2026-01-19T18:06:25.451118+00:00", "days_on_market": 32, "property_type": "apartment", "pet_friendly": false, "parking": true, "laundry": "in-unit", "photos_count": 11, "score": 44.9, "tags": ["Loaded with Amenities", "Parking", "In-Unit Laundry"], "amenities": ["Central AC", "Concierge", "Rooftop Deck", "Bike Storage", "Co-Working Space", "EV Charging", "Gym", "Pool"]}, {"id": "re_8_1", "source": "rentcast", "title": "1146 Fillmore St", "address": "1146 Fillmore St, San Francisco, CA 94111", "city": "San Francisco", "state": "CA", "zip": "94118", "price": 5978, "bedrooms": 3, "bathrooms": 2, "sqft": 1170, "url": "https://www.rentcast.io/apartments/san-francisco-ca/1146-fillmore-st", "image": "", "lat": 37.79462813511907, "lng": -122.4354828001083, "listed_date": "2026-01-11T18:06:25.451399+00:00", "days_on_market": 40, "property_type": "apartment", "pet_friendly": false, "parking": true, "laundry": "in-unit", "photos_count": 25, "score": 43.7, "tags": ["Parking", "In-Unit Laundry"], "amenities": ["Gym", "Bike Storage", "Rooftop Deck"]}, {"id": "zi_13_0", "source": "zillow", "title": "1216 Church St", "address": "1216 Church St, San Francisco, CA 94113", "city": "San Francisco", "state": "CA", "zip": "94118", "price": 4845, "bedrooms": 3, "bathrooms": 1, "sqft": 1004, "url": "https://www.zillow.com/homedetails/1216-Church-St-San-Francisco-CA/1234130_zpid/", "image": "", "lat": 37.799769188702456, "lng": -122.42203832993198, "listed_date": "2026-01-12T18:06:25.451564+00:00", "days_on_market": 39, "property_type": "townhouse", "pet_friendly": false, "parking": false, "laundry": "", "photos_count": 16, "score": 42.9, "tags": [], "amenities": ["Gym", "Bike Storage", "Hardwood Floors", "Co-Working Space", "Rooftop Deck", "Package Room"]}, {"id": "zi_8_0", "source": "zillow", "title": "1357 Folsom St", "address": "1357 Folsom St, San Francisco, CA 94127", "city": "San Francisco", "state": "CA", "zip": "94108", "price": 6071, "bedrooms": 3, "bathrooms": 2.5, "sqft": 966, "url": "https://www.zillow.com/homedetails/1357-Folsom-St-San-Francisco-CA/123480_zpid/", "image": "", "lat": 37.801768198967196, "lng": -122.43476380289545, "listed_date": "2026-01-19T18:06:25.451381+00:00", "days_on_market": 32, "property_type": "townhouse", "pet_friendly": true, "parking": true, "laundry": "in-unit", "photos_count": 14, "score": 40.1, "tags": ["Parking", "In-Unit Laundry"], "amenities": ["Hardwood Floors", "Gym"]}];
+
+// ── State ──────────────────────────────────
+let activeFilter = 'all';
+let searchQuery = '';
+
+// ── Render ─────────────────────────────────
+function render() {
+  const filtered = DATA.filter(l => {
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      if (!l.address.toLowerCase().includes(q) && !l.title.toLowerCase().includes(q))
+        return false;
+    }
+    switch (activeFilter) {
+      case 'new':      return l.tags.some(t => t.includes('New'));
+      case 'top':      return l.score >= 70;
+      case 'value':    return l.tags.includes('Great Value');
+      case 'rentcast': return l.source === 'rentcast';
+      case 'zillow':   return l.source === 'zillow';
+      case 'redfin':   return l.source === 'redfin';
+      default:         return true;
+    }
+  });
+
+  // Stats
+  const stats = document.getElementById('stats');
+  const prices = filtered.filter(l => l.price).map(l => l.price);
+  const avgPrice = prices.length ? Math.round(prices.reduce((a,b) => a+b, 0) / prices.length) : 0;
+  const newCount = filtered.filter(l => l.tags.some(t => t.includes('New'))).length;
+  stats.innerHTML = `
+    <div class="stat"><strong>${filtered.length}</strong>listings</div>
+    <div class="stat"><strong>${newCount}</strong>new this week</div>
+    <div class="stat"><strong>${avgPrice ? '$' + avgPrice.toLocaleString() : '—'}</strong>avg rent</div>
+    <div class="stat"><strong>${DATA.length}</strong>total tracked</div>
+  `;
+
+  // Grid
+  const grid = document.getElementById('grid');
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div class="empty-state">
+      <h2>No listings match</h2>
+      <p>Try adjusting your filters or search query.</p>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(l => {
+    const scoreClass = l.score >= 70 ? 'high' : l.score >= 50 ? 'mid' : 'low';
+    const priceStr = l.price ? '$' + l.price.toLocaleString() + '/mo' : 'Price TBD';
+    const details = [
+      l.bedrooms ? l.bedrooms + 'bd' : '',
+      l.bathrooms ? l.bathrooms + 'ba' : '',
+      l.sqft ? l.sqft.toLocaleString() + ' sqft' : '',
+    ].filter(Boolean).join(' · ');
+
+    const imgHtml = l.image
+      ? `<img class="card-img" src="${l.image}" alt="${l.title}" loading="lazy" onerror="this.outerHTML='<div class=card-img-placeholder>🏢</div>'">`
+      : `<div class="card-img-placeholder">🏢</div>`;
+
+    const tagsHtml = l.tags.map(t => {
+      let cls = '';
+      if (t.includes('New')) cls = 'new';
+      else if (t.includes('Value')) cls = 'value';
+      else if (t.includes('Spacious')) cls = 'space';
+      return `<span class="tag ${cls}">${t}</span>`;
+    }).join('');
+
+    const domStr = l.days_on_market !== null ? l.days_on_market + 'd ago' : '';
+
+    return `
+      <div class="card">
+        ${imgHtml}
+        <div class="card-body">
+          <div class="card-top">
+            <div class="card-title">${l.title}</div>
+            <div class="card-score ${scoreClass}">${l.score}</div>
+          </div>
+          <div class="card-address">${l.address}</div>
+          <div class="card-details">
+            <span class="price">${priceStr}</span>
+            <span>${details}</span>
+            ${domStr ? `<span>${domStr}</span>` : ''}
+          </div>
+          ${tagsHtml ? `<div class="card-tags">${tagsHtml}</div>` : ''}
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:0.4rem;">
+            <span class="card-source ${l.source}">${l.source}</span>
+            ${l.url ? `<span class="card-link"><a href="${l.url}" target="_blank" rel="noopener">View Listing →</a></span>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── Events ─────────────────────────────────
+document.getElementById('controls').addEventListener('click', e => {
+  if (e.target.tagName !== 'BUTTON') return;
+  document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+  e.target.classList.add('active');
+  activeFilter = e.target.dataset.filter;
+  render();
+});
+
+document.getElementById('searchInput').addEventListener('input', e => {
+  searchQuery = e.target.value;
+  render();
+});
+
+// ── Init ───────────────────────────────────
+render();
+</script>
+</body>
+</html>
