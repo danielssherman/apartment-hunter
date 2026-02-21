@@ -39,15 +39,15 @@ class ScoringWeights:
     Weights for the quality scoring algorithm (0-1 each).
     Adjust these to change what "high quality" means to you.
     """
-    price_value: float = 0.20         # Lower price relative to area avg
-    size_sqft: float = 0.15           # Larger square footage
-    amenities: float = 0.15           # Number of amenities
-    location_walkscore: float = 0.15  # Walk score / transit access
+    price_value: float = 0.10         # Lower price relative to area avg
+    size_sqft: float = 0.10           # Larger square footage
+    amenities: float = 0.10           # Number of amenities
+    location_walkscore: float = 0.05  # Walk score / transit access
     photos_count: float = 0.05        # More photos = more transparent
     recency: float = 0.15             # How recently listed
-    pet_friendly: float = 0.05        # Allows pets
-    parking: float = 0.05             # Has parking
-    laundry: float = 0.05             # In-unit or on-site laundry
+    pet_friendly: float = 0.15        # Allows pets
+    parking: float = 0.15             # Has parking
+    laundry: float = 0.15             # In-unit or on-site laundry
 
 
 @dataclass

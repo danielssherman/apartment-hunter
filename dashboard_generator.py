@@ -7,27 +7,14 @@ import json
 import logging
 import os
 import re
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 from urllib.parse import quote
-
-import requests
 
 from config import AppConfig
 from fetchers import Listing
 
 logger = logging.getLogger(__name__)
-
-_BROWSER_HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/120.0.0.0 Safari/537.36"
-    ),
-    "Accept": "text/html,application/xhtml+xml",
-    "Accept-Language": "en-US,en;q=0.9",
-}
 
 
 def _build_zillow_url(address: str, city: str, state: str, zip_code: str) -> str:
@@ -41,111 +28,59 @@ def _build_google_rental_url(address: str, city: str, state: str) -> str:
     return f"https://www.google.com/search?q={quote(q)}"
 
 
-def _check_page_rental_status(url: str) -> Optional[bool]:
-    """GET a URL and check page content for rental vs sale signals.
-
-    Returns True (rental), False (sale), or None (could not determine).
-    """
-    try:
-        resp = requests.get(
-            url, headers=_BROWSER_HEADERS, timeout=5, allow_redirects=True
-        )
-        if resp.status_code != 200:
-            return None
-        text = resp.text[:120_000].lower()
-        rental = text.count("for rent") + text.count('"forrent"') + text.count('"for_rent"')
-        sale = text.count("for sale") + text.count('"forsale"') + text.count('"for_sale"')
-        if rental > sale:
-            return True
-        if sale > rental:
-            return False
-        return None
-    except Exception:
-        return None
+def _build_redfin_search_url(address: str, city: str, state: str) -> str:
+    q = f'site:redfin.com "{address}" "{city}" {state} for rent'
+    return f"https://www.google.com/search?q={quote(q)}"
 
 
-def _can_reach_site(url: str) -> bool:
-    """Quick check: does a HEAD request to this URL get a non-blocked response?"""
-    try:
-        resp = requests.head(
-            url, headers=_BROWSER_HEADERS, timeout=4, allow_redirects=True
-        )
-        return resp.status_code == 200
-    except Exception:
-        return False
+_SOURCE_LABELS = {"zillow": "Zillow", "redfin": "Redfin", "rentcast": "RentCast"}
 
 
-def _enrich_listing_urls(listings_json: list[dict]) -> None:
-    """Add search_url, url_verified, and search_label to each listing.
-
-    Strategy:
-    1. Try Zillow (canary test first — skip all if blocked).
-    2. For each listing, attempt GET-based rental verification on Zillow.
-    3. If Zillow is blocked, fall back to Google rental search URL.
-    """
-    # Separate already-verified listings
-    need_url = [l for l in listings_json if not l.get("url")]
+def _build_listing_links(listings_json: list[dict]) -> None:
+    """Build a list of platform links for each listing (pure URL construction)."""
     for l in listings_json:
-        if l.get("url"):
-            l["search_url"] = l["url"]
-            l["url_verified"] = True
-            src = l["source"]
-            l["search_label"] = "via " + src[0].upper() + src[1:]
+        links: list[dict] = []
+        source = l.get("source", "")
+        has_direct = bool(l.get("url"))
 
-    if not need_url:
-        return
+        # 1. Source direct link
+        if has_direct:
+            links.append({
+                "platform": source,
+                "url": l["url"],
+                "label": _SOURCE_LABELS.get(source, source.title()),
+            })
 
-    # Canary: test one Zillow URL to see if we're blocked
-    sample = need_url[0]
-    canary_url = _build_zillow_url(
-        sample["address"], sample["city"], sample["state"], sample["zip"],
-    )
-    zillow_reachable = _can_reach_site(canary_url)
+        # 2. Zillow search (skip when source IS zillow with a direct URL)
+        if not (source == "zillow" and has_direct):
+            links.append({
+                "platform": "zillow",
+                "url": _build_zillow_url(
+                    l["address"], l["city"], l["state"], l["zip"],
+                ),
+                "label": "Zillow",
+            })
 
-    if zillow_reachable:
-        logger.info("Zillow reachable — verifying %d listing URLs...", len(need_url))
+        # 3. Redfin search (skip when source IS redfin with a direct URL)
+        if not (source == "redfin" and has_direct):
+            links.append({
+                "platform": "redfin",
+                "url": _build_redfin_search_url(
+                    l["address"], l["city"], l["state"],
+                ),
+                "label": "Redfin",
+            })
 
-        def verify_via_zillow(listing: dict) -> None:
-            url = _build_zillow_url(
-                listing["address"], listing["city"],
-                listing["state"], listing["zip"],
-            )
-            result = _check_page_rental_status(url)
-            if result is True:
-                listing["search_url"] = url
-                listing["url_verified"] = True
-                listing["search_label"] = "Zillow (verified rental)"
-            elif result is False:
-                listing["search_url"] = _build_google_rental_url(
-                    listing["address"], listing["city"], listing["state"],
-                )
-                listing["url_verified"] = False
-                listing["search_label"] = "Search Rentals"
-            else:
-                listing["search_url"] = url
-                listing["url_verified"] = None
-                listing["search_label"] = "Search Zillow"
+        # 4. Google search (always)
+        links.append({
+            "platform": "google",
+            "url": _build_google_rental_url(
+                l["address"], l["city"], l["state"],
+            ),
+            "label": "Google",
+        })
 
-        with ThreadPoolExecutor(max_workers=8) as pool:
-            list(pool.map(verify_via_zillow, need_url))
-    else:
-        logger.info(
-            "Zillow blocked (anti-bot) — using Google rental search as fallback"
-        )
-        for listing in need_url:
-            listing["search_url"] = _build_google_rental_url(
-                listing["address"], listing["city"], listing["state"],
-            )
-            listing["url_verified"] = None
-            listing["search_label"] = "Search Rentals"
-
-    verified = sum(1 for l in listings_json if l.get("url_verified") is True)
-    sale = sum(1 for l in listings_json if l.get("url_verified") is False)
-    unknown = sum(1 for l in listings_json if l.get("url_verified") is None)
-    logger.info(
-        "URL results: %d verified, %d sale-redirect, %d search-fallback",
-        verified, sale, unknown,
-    )
+        l["links"] = links
 
 
 def generate_dashboard(
@@ -187,8 +122,8 @@ def generate_dashboard(
             "amenities": listing.amenities[:10],  # cap for display
         })
 
-    # Verify and enrich listing URLs
-    _enrich_listing_urls(listings_json)
+    # Build platform links for each listing
+    _build_listing_links(listings_json)
 
     # Also save raw JSON
     json_path = os.path.join(config.output_dir, config.data_filename)
@@ -337,6 +272,51 @@ def _build_html(data_json: str, generated_at: str, config: AppConfig) -> str:
   .controls input:focus {{ border-color: var(--accent); }}
   .controls input::placeholder {{ color: var(--text2); }}
 
+  .price-filter {{
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }}
+  .price-filter-label {{
+    font-family: 'DM Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--text2);
+  }}
+  .price-filter input {{
+    max-width: 100px;
+  }}
+
+  .bath-filter {{
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }}
+  .bath-filter-label {{
+    font-family: 'DM Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--text2);
+  }}
+  .bath-select {{
+    font-family: 'DM Mono', monospace;
+    font-size: 0.78rem;
+    padding: 0.45rem 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--text2);
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239a9a9f' d='M3 5l3 3 3-3'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.6rem center;
+    padding-right: 1.8rem;
+  }}
+  .bath-select:focus {{ border-color: var(--accent); }}
+  .bath-select:hover {{ border-color: var(--accent); color: var(--text); }}
+
   /* ── Stats Bar ──────────────────────────── */
   .stats {{
     max-width: 1400px;
@@ -478,12 +458,6 @@ def _build_html(data_json: str, generated_at: str, config: AppConfig) -> str:
   .card-source.zillow   {{ color: var(--blue); }}
   .card-source.redfin   {{ color: var(--red); }}
 
-  .card-link-wrapper {{
-    text-decoration: none;
-    color: inherit;
-    display: block;
-  }}
-
   .card-neighborhood {{
     font-family: 'DM Mono', monospace;
     font-size: 0.72rem;
@@ -500,13 +474,23 @@ def _build_html(data_json: str, generated_at: str, config: AppConfig) -> str:
     background: var(--surface2);
   }}
 
-  .card-via {{
+  .card-links {{ display: flex; gap: 0.35rem; flex-wrap: wrap; }}
+  .card-link {{
     font-family: 'DM Mono', monospace;
     font-size: 0.68rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 6px;
+    background: var(--surface2);
     color: var(--text2);
+    text-decoration: none;
+    transition: all 0.15s;
+    border: 1px solid transparent;
+    white-space: nowrap;
   }}
-  .card-via.verified {{ color: var(--green); }}
-  .card-via.sale-warning {{ color: var(--accent2); }}
+  .card-link:hover {{ border-color: var(--text2); color: var(--text); }}
+  .card-link.zillow  {{ color: var(--blue); }}
+  .card-link.redfin  {{ color: var(--red); }}
+  .card-link.rentcast {{ color: var(--green); }}
 
   /* ── Action Buttons ─────────────────────── */
   .card-actions {{
@@ -595,6 +579,23 @@ def _build_html(data_json: str, generated_at: str, config: AppConfig) -> str:
   <select id="neighborhoodFilter" class="neighborhood-select">
     <option value="">All Neighborhoods</option>
   </select>
+  <div class="price-filter">
+    <span class="price-filter-label">$</span>
+    <input type="number" id="priceMin" placeholder="Min" min="0" step="100">
+    <span class="price-filter-label">–</span>
+    <input type="number" id="priceMax" placeholder="Max" min="0" step="100">
+  </div>
+  <div class="bath-filter">
+    <span class="bath-filter-label">Bath</span>
+    <select id="bathroomFilter" class="bath-select">
+      <option value="">Any</option>
+      <option value="1">1+</option>
+      <option value="1.5">1.5+</option>
+      <option value="2">2+</option>
+      <option value="2.5">2.5+</option>
+      <option value="3">3+</option>
+    </select>
+  </div>
   <div class="search-box">
     <input type="text" id="searchInput" placeholder="Search address or neighborhood...">
   </div>
@@ -657,6 +658,9 @@ nhSet.forEach(n => {{
 let activeFilter = 'all';
 let searchQuery = '';
 let selectedNeighborhood = '';
+let priceMin = 0;
+let priceMax = Infinity;
+let bathroomMin = 0;
 
 // ── Listing Actions (localStorage) ────────
 const ACTIONS_KEY = 'apt-hunter-actions';
@@ -731,6 +735,9 @@ function render() {{
     }}
     if (selectedNeighborhood && l.neighborhood !== selectedNeighborhood)
       return false;
+    if (priceMin && l.price && l.price < priceMin) return false;
+    if (priceMax !== Infinity && l.price && l.price > priceMax) return false;
+    if (bathroomMin && (!l.bathrooms || l.bathrooms < bathroomMin)) return false;
     switch (activeFilter) {{
       case 'new':      return l.tags.some(t => t.includes('New'));
       case 'top':      return l.score >= 70;
@@ -785,11 +792,10 @@ function render() {{
       l.sqft ? l.sqft.toLocaleString() + ' sqft' : '',
     ].filter(Boolean).join(' · ');
 
-    // Link URL + label (pre-computed at build time)
-    const linkUrl = l.search_url || '';
-    const linkLabel = l.search_label || '';
-    const viaCls = l.url_verified === true ? 'verified'
-                 : l.url_verified === false ? 'sale-warning' : '';
+    // Link pills
+    const linksHtml = (l.links || []).map(lk =>
+      `<a class="card-link ${{lk.platform}}" href="${{lk.url}}" target="_blank" rel="noopener">${{lk.label}} ↗</a>`
+    ).join('');
 
     // Map or image
     const mapId = 'map-' + i;
@@ -816,7 +822,6 @@ function render() {{
     const escKey = key.replace(/'/g, '&#39;');
 
     return `
-      <a class="card-link-wrapper" href="${{linkUrl}}" target="_blank" rel="noopener">
       <div class="card ${{stateClass}}">
         ${{mediaHtml}}
         <div class="card-body">
@@ -839,11 +844,10 @@ function render() {{
               <button class="card-action-btn ${{action === 'disliked' ? 'active-disliked' : ''}}" data-address="${{escKey}}" data-action="disliked" title="Dislike">&#10007;</button>
               <button class="card-action-btn ${{action === 'inactive' ? 'active-inactive' : ''}}" data-address="${{escKey}}" data-action="inactive" title="Not for rent">&#8856;</button>
             </div>
-            <span class="card-via ${{viaCls}}">${{linkLabel}}</span>
+            <div class="card-links">${{linksHtml}}</div>
           </div>
         </div>
       </div>
-      </a>
     `;
   }}).join('');
 
@@ -866,6 +870,20 @@ document.getElementById('searchInput').addEventListener('input', e => {{
 
 document.getElementById('neighborhoodFilter').addEventListener('change', e => {{
   selectedNeighborhood = e.target.value;
+  render();
+}});
+
+document.getElementById('priceMin').addEventListener('input', e => {{
+  priceMin = parseInt(e.target.value) || 0;
+  render();
+}});
+document.getElementById('priceMax').addEventListener('input', e => {{
+  priceMax = parseInt(e.target.value) || Infinity;
+  render();
+}});
+
+document.getElementById('bathroomFilter').addEventListener('change', e => {{
+  bathroomMin = parseFloat(e.target.value) || 0;
   render();
 }});
 
