@@ -548,6 +548,118 @@ def _build_html(data_json: str, generated_at: str, config: AppConfig) -> str:
   }}
   .empty-state h2 {{ font-size: 1.5rem; color: var(--text); margin-bottom: 0.5rem; }}
 
+  .sort-label {{
+    font-family: 'DM Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--text2);
+  }}
+  .compare-btn {{
+    font-family: 'DM Mono', monospace;
+    font-size: 0.78rem;
+    padding: 0.45rem 1rem;
+    border: 1px solid var(--accent);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--accent);
+    cursor: pointer;
+    transition: all 0.2s;
+  }}
+  .compare-btn:hover {{ background: var(--accent); color: #fff; }}
+  .modal-overlay {{
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }}
+  .modal {{
+    max-width: 95vw;
+    max-height: 90vh;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: auto;
+    padding: 1.5rem;
+  }}
+  .modal-header {{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }}
+  .modal-header h2 {{ font-size: 1.25rem; font-weight: 700; }}
+  .modal-close {{
+    background: none;
+    border: none;
+    color: var(--text2);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    line-height: 1;
+  }}
+  .modal-close:hover {{ color: var(--text); }}
+  .compare-table {{ width: 100%; border-collapse: collapse; }}
+  .compare-table th {{
+    position: sticky;
+    top: 0;
+    background: var(--surface2);
+    text-align: left;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.78rem;
+    padding: 0.6rem 0.8rem;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }}
+  .compare-table td {{
+    padding: 0.5rem 0.8rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    font-size: 0.85rem;
+  }}
+  .compare-table .row-label {{
+    color: var(--text2);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    min-width: 100px;
+    white-space: nowrap;
+  }}
+  .compare-note {{
+    width: 100%;
+    min-width: 150px;
+    min-height: 60px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.8rem;
+    padding: 0.4rem;
+    resize: vertical;
+  }}
+  .compare-note:focus {{ border-color: var(--accent); outline: none; }}
+  .compare-score {{
+    font-family: 'DM Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 0.2rem 0.55rem;
+    border-radius: 8px;
+    display: inline-block;
+  }}
+  .compare-score.high {{ background: #1b5e20; color: #a5d6a7; }}
+  .compare-score.mid  {{ background: #e65100; color: #ffcc80; }}
+  .compare-score.low  {{ background: #b71c1c; color: #ef9a9a; }}
+  .compare-links {{ display: flex; gap: 0.35rem; flex-wrap: wrap; }}
+  .has-notes {{
+    font-size: 0.72rem;
+    color: var(--accent);
+    margin-left: 0.3rem;
+  }}
+
   @media (max-width: 768px) {{
     .header {{ padding: 1.5rem 1rem; }}
     .controls, .stats, .grid {{ padding-left: 1rem; padding-right: 1rem; }}
@@ -573,6 +685,7 @@ def _build_html(data_json: str, generated_at: str, config: AppConfig) -> str:
   <button data-filter="top">⭐ Top Rated</button>
   <button data-filter="value">💰 Best Value</button>
   <button data-filter="liked">♥ Liked</button>
+  <button id="compareBtn" class="compare-btn" style="display:none">Compare Liked</button>
   <button data-filter="rentcast">RentCast</button>
   <button data-filter="zillow">Zillow</button>
   <button data-filter="redfin">Redfin</button>
@@ -596,6 +709,17 @@ def _build_html(data_json: str, generated_at: str, config: AppConfig) -> str:
       <option value="3">3+</option>
     </select>
   </div>
+  <div class="bath-filter">
+    <span class="sort-label">Sort</span>
+    <select id="sortSelect" class="bath-select">
+      <option value="score">Score (high first)</option>
+      <option value="price-asc">Price (low first)</option>
+      <option value="price-desc">Price (high first)</option>
+      <option value="newest">Newest</option>
+      <option value="sqft">Size (sqft)</option>
+      <option value="ppsf">$/sqft</option>
+    </select>
+  </div>
   <div class="search-box">
     <input type="text" id="searchInput" placeholder="Search address or neighborhood...">
   </div>
@@ -603,6 +727,7 @@ def _build_html(data_json: str, generated_at: str, config: AppConfig) -> str:
 
 <div class="stats" id="stats"></div>
 <div class="grid" id="grid"></div>
+<div id="compareModal"></div>
 
 <script>
 const DATA = {data_json};
@@ -661,6 +786,13 @@ let selectedNeighborhood = '';
 let priceMin = 0;
 let priceMax = Infinity;
 let bathroomMin = 0;
+let sortBy = 'score';
+
+// ── Listing Notes (localStorage) ──────────
+const NOTES_KEY = 'apt-hunter-notes';
+function loadNotes() {{ return JSON.parse(localStorage.getItem(NOTES_KEY) || '{{}}'); }}
+function saveNotes(n) {{ localStorage.setItem(NOTES_KEY, JSON.stringify(n)); }}
+let listingNotes = loadNotes();
 
 // ── Listing Actions (localStorage) ────────
 const ACTIONS_KEY = 'apt-hunter-actions';
@@ -750,14 +882,27 @@ function render() {{
     }}
   }});
 
-  // Sort: liked first, neutral middle, disliked/inactive last
+  // Sort: primary by user-selected dimension, secondary by action order
   const actionOrder = (l) => {{
     const a = listingActions[listingKey(l)];
     if (a === 'liked') return 0;
     if (a === 'disliked' || a === 'inactive') return 2;
     return 1;
   }};
-  filtered.sort((a, b) => actionOrder(a) - actionOrder(b));
+  const nullSafe = (v) => (v == null || isNaN(v)) ? Infinity : v;
+  const nullSafeDesc = (v) => (v == null || isNaN(v)) ? -Infinity : v;
+  filtered.sort((a, b) => {{
+    let cmp = 0;
+    switch (sortBy) {{
+      case 'score':      cmp = nullSafeDesc(b.score) - nullSafeDesc(a.score); break;
+      case 'price-asc':  cmp = nullSafe(a.price) - nullSafe(b.price); break;
+      case 'price-desc': cmp = nullSafe(b.price) - nullSafe(a.price); break;
+      case 'newest':     cmp = nullSafe(a.days_on_market) - nullSafe(b.days_on_market); break;
+      case 'sqft':       cmp = nullSafeDesc(b.sqft) - nullSafeDesc(a.sqft); break;
+      case 'ppsf':       cmp = ((a.price && a.sqft) ? a.price/a.sqft : Infinity) - ((b.price && b.sqft) ? b.price/b.sqft : Infinity); break;
+    }}
+    return cmp || (actionOrder(a) - actionOrder(b));
+  }});
 
   // Stats
   const stats = document.getElementById('stats');
@@ -765,6 +910,17 @@ function render() {{
   const avgPrice = prices.length ? Math.round(prices.reduce((a,b) => a+b, 0) / prices.length) : 0;
   const newCount = filtered.filter(l => l.tags.some(t => t.includes('New'))).length;
   const likedCount = DATA.filter(l => listingActions[listingKey(l)] === 'liked').length;
+  document.getElementById('compareBtn').style.display = likedCount >= 2 ? '' : 'none';
+
+  // Persist filter state
+  try {{
+    localStorage.setItem('apt-hunter-filters', JSON.stringify({{
+      activeFilter, searchQuery, selectedNeighborhood, priceMin,
+      priceMax: priceMax === Infinity ? null : priceMax,
+      bathroomMin, sortBy
+    }}));
+  }} catch(e) {{}}
+
   stats.innerHTML = `
     <div class="stat"><strong>${{filtered.length}}</strong>listings</div>
     <div class="stat"><strong>${{newCount}}</strong>new this week</div>
@@ -838,7 +994,7 @@ function render() {{
           </div>
           ${{tagsHtml ? `<div class="card-tags">${{tagsHtml}}</div>` : ''}}
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:0.4rem;">
-            <span class="card-source ${{l.source}}">${{l.source}}</span>
+            <span class="card-source ${{l.source}}">${{l.source}}</span>${{listingNotes[key] ? '<span class="has-notes" title="Has notes">&#9998;</span>' : ''}}
             <div class="card-actions">
               <button class="card-action-btn ${{action === 'liked' ? 'active-liked' : ''}}" data-address="${{escKey}}" data-action="liked" title="Like">&#9829;</button>
               <button class="card-action-btn ${{action === 'disliked' ? 'active-disliked' : ''}}" data-address="${{escKey}}" data-action="disliked" title="Dislike">&#10007;</button>
@@ -887,6 +1043,94 @@ document.getElementById('bathroomFilter').addEventListener('change', e => {{
   render();
 }});
 
+document.getElementById('sortSelect').addEventListener('change', e => {{
+  sortBy = e.target.value;
+  render();
+}});
+
+document.getElementById('compareBtn').addEventListener('click', openCompare);
+
+// ── Compare Modal ──────────────────────────
+let escapeHandler = null;
+
+function openCompare() {{
+  const liked = DATA.filter(l => listingActions[listingKey(l)] === 'liked');
+  if (liked.length < 2) return;
+
+  let html = '<div class="modal-overlay" id="modalOverlay"><div class="modal" onclick="event.stopPropagation()"><div class="modal-header"><h2>Compare Liked Listings</h2><button class="modal-close" id="modalClose">&times;</button></div><table class="compare-table"><thead><tr><th class="row-label"></th>';
+  liked.forEach(l => {{
+    const t = l.title.length > 25 ? l.title.slice(0, 25) + '...' : l.title;
+    html += '<th>' + t + '</th>';
+  }});
+  html += '</tr></thead><tbody>';
+
+  function row(label, fn) {{
+    html += '<tr><td class="row-label">' + label + '</td>';
+    liked.forEach(l => {{ html += '<td>' + fn(l) + '</td>'; }});
+    html += '</tr>';
+  }}
+
+  row('Price', l => l.price ? '$' + l.price.toLocaleString() + '/mo' : '\u2014');
+  row('Beds', l => l.bedrooms || '\u2014');
+  row('Baths', l => l.bathrooms || '\u2014');
+  row('Sqft', l => l.sqft ? l.sqft.toLocaleString() : '\u2014');
+  row('$/sqft', l => (l.price && l.sqft) ? '$' + Math.round(l.price / l.sqft) : '\u2014');
+  row('Score', l => {{
+    const cls = l.score >= 70 ? 'high' : l.score >= 50 ? 'mid' : 'low';
+    return '<span class="compare-score ' + cls + '">' + l.score + '</span>';
+  }});
+  row('Neighborhood', l => l.neighborhood || '\u2014');
+  row('Days on Market', l => l.days_on_market != null ? l.days_on_market + 'd' : '\u2014');
+  row('Tags', l => l.tags.map(t => {{
+    let cls = '';
+    if (t.includes('New')) cls = 'new';
+    else if (t.includes('Value')) cls = 'value';
+    else if (t.includes('Spacious')) cls = 'space';
+    return '<span class="tag ' + cls + '">' + t + '</span>';
+  }}).join(' '));
+  row('Links', l => (l.links || []).map(lk =>
+    '<a class="card-link ' + lk.platform + '" href="' + lk.url + '" target="_blank" rel="noopener">' + lk.label + ' \u2197</a>'
+  ).join(''));
+
+  html += '<tr><td class="row-label">Notes</td>';
+  liked.forEach(l => {{
+    const key = listingKey(l);
+    const escK = key.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+    const note = (listingNotes[key] || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    html += '<td><textarea class="compare-note" data-key="' + escK + '">' + note + '</textarea></td>';
+  }});
+  html += '</tr></tbody></table></div></div>';
+
+  document.getElementById('compareModal').innerHTML = html;
+  document.getElementById('modalClose').addEventListener('click', closeCompare);
+  document.getElementById('modalOverlay').addEventListener('click', closeCompare);
+
+  let noteTimer;
+  document.getElementById('compareModal').addEventListener('input', e => {{
+    if (!e.target.classList.contains('compare-note')) return;
+    clearTimeout(noteTimer);
+    noteTimer = setTimeout(() => {{
+      const key = e.target.dataset.key;
+      const val = e.target.value.trim();
+      if (val) listingNotes[key] = val;
+      else delete listingNotes[key];
+      saveNotes(listingNotes);
+    }}, 300);
+  }});
+
+  escapeHandler = (e) => {{ if (e.key === 'Escape') closeCompare(); }};
+  document.addEventListener('keydown', escapeHandler);
+}}
+
+function closeCompare() {{
+  document.getElementById('compareModal').innerHTML = '';
+  if (escapeHandler) {{
+    document.removeEventListener('keydown', escapeHandler);
+    escapeHandler = null;
+  }}
+  render();
+}}
+
 // ── Action Button Delegation ──────────
 document.getElementById('grid').addEventListener('click', e => {{
   const btn = e.target.closest('.card-action-btn');
@@ -905,6 +1149,27 @@ document.getElementById('grid').addEventListener('click', e => {{
 }});
 
 // ── Init ───────────────────────────────────
+try {{
+  const saved = JSON.parse(localStorage.getItem('apt-hunter-filters'));
+  if (saved) {{
+    activeFilter = saved.activeFilter || 'all';
+    searchQuery = saved.searchQuery || '';
+    selectedNeighborhood = saved.selectedNeighborhood || '';
+    priceMin = saved.priceMin || 0;
+    priceMax = saved.priceMax != null ? saved.priceMax : Infinity;
+    bathroomMin = saved.bathroomMin || 0;
+    sortBy = saved.sortBy || 'score';
+    document.getElementById('sortSelect').value = sortBy;
+    document.getElementById('neighborhoodFilter').value = selectedNeighborhood;
+    if (priceMin) document.getElementById('priceMin').value = priceMin;
+    if (saved.priceMax != null) document.getElementById('priceMax').value = saved.priceMax;
+    document.getElementById('bathroomFilter').value = bathroomMin || '';
+    document.getElementById('searchInput').value = searchQuery;
+    document.querySelectorAll('.controls button[data-filter]').forEach(b => {{
+      b.classList.toggle('active', b.dataset.filter === activeFilter);
+    }});
+  }}
+}} catch(e) {{}}
 render();
 </script>
 </body>
